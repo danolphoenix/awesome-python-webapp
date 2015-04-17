@@ -2,7 +2,7 @@
 #-*- coding:utf-8 -*-
 
 __author__ = " Rodan but not original"
-''''' 设计数据库接口 以方便调用者使用  希望调用者可以通过： 
+''' 设计数据库接口 以方便调用者使用  希望调用者可以通过： 
 from transwarp import db 
 db.create_engine(user='root',password='123456',database='test',host='127.0.0.1',port=3306) 
 然后直接操作sql语句  
@@ -20,6 +20,7 @@ with db.transactions():
     db.update('....') 
     db.select('....') 
 ''' 
+
 '''
 Database operation module.
 '''
@@ -93,7 +94,6 @@ class Dict(dict):
             return self[key]
         except KeyError:
             raise AttributeError(r"'Dict' object has no attribute '%s'" % key)
-
     '''
     Dict从dict继承，所以具备所有dict的功能，同时又实现了特殊方法__getattr__()和__setattr__()，所以又可以像引用普通字段那样写
     dict[id]
@@ -106,6 +106,7 @@ class Dict(dict):
 @method next_id() uuid4()  make a random UUID 得到一个随机的UUID 
 如果没有传入参数根据系统当前时间15位和一个随机得到的UUID 填充3个0 组成一个长度为50的字符串
 '''
+
 def next_id(t = None):
     '''Return next id as 50-char string.
        Args:
@@ -131,6 +132,7 @@ class DBError(Exception):
 
 class MultiColumnsError(DBError):
     pass
+
 
 '''''对数据库连接以及最基本的操作进行了封装''' 
 class _LasyConnection(object):
@@ -161,6 +163,9 @@ class _LasyConnection(object):
             logging.info('close connection <%s>...' % hex(id(connection)))
             connection.close()
 
+
+
+#db.py
 #database Engine Object
 
 class _Engine(object):
@@ -177,6 +182,8 @@ engine = None
 由于_db_ctx继承threadlocal对象，所以，它持有的数据库连接对于每个线程看到的都是不一样的。任何一个线程都无法访问到其他线程持有的数据库连接
 有了这engine,_db_ctx两个全局变量，我们继续实现数据库连接的上下文，目的是自动获取和释放连接
 '''
+engine = None
+
 #DB Context Object
 class _DbCtx(threading.local):
     '''
@@ -205,6 +212,7 @@ class _DbCtx(threading.local):
         return self.connection.cursor()
 
 #_db_ctx is threadlocal object, so every thread won't visit other thread's db connection.
+
 #由于它继承threading.local 是一个threadlocal对象 所以它对于每一个线程都是不一样的。  
 #所以当需要数据库连接的时候就使用它来创建 
 _db_ctx = _DbCtx()
@@ -263,6 +271,8 @@ def create_engine(user,password,database,host="127.0.0.1",port = 3306,**kw):
  with 后面的语句会返回 _ConnectionCtx 对象 然后调用这个对象的 __enter__方法得到返回值 返回值赋值给as后面的变量 然后执行 
  with下面的语句 执行完毕后 调用那个对象的 __exit__()方法 
 '''  
+
+#Automatically acquire and release connection.if you wanna to do some db operation,can use WITH sentence or @,then everytime do db operation,it will acquire and release db connection automatically.
 class _ConnectionCtx(object):
     '''
     _ConnectionCtx object that can open and close connection context. _ConnectionCtx object can be nested and only the most
@@ -298,6 +308,7 @@ def connection():
         pass
     '''
     return _ConnectionCtx()
+
 
 #采用装饰器的方法 让其能够进行共用同一个数据库连接
 def with_connection(func):
@@ -601,6 +612,7 @@ if __name__=='__main__':
     logging.basicConfig(level=logging.DEBUG)
     import pdb
     pdb.set_trace()
+
     create_engine('luodan', 'a', 'webapp')
   #Dict()  
     #create_engine('root','123456','pythonstudy')  
@@ -624,7 +636,6 @@ if __name__=='__main__':
         insert('user',**u1) 
         print 'hellp' 
     '''  
-    
     update('drop table if exists user')
     update('create table user (id int primary key, name text, email text, passwd text, last_modified real)')
     import doctest
