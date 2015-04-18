@@ -2,7 +2,12 @@
 #-*- coding:utf-8 -*-
 
 __author__ = " Rodan but not original"
-''' 设计数据库接口 以方便调用者使用  希望调用者可以通过： 
+
+
+
+
+''''' 设计数据库接口 以方便调用者使用  希望调用者可以通过： 
+
 from transwarp import db 
 db.create_engine(user='root',password='123456',database='test',host='127.0.0.1',port=3306) 
 然后直接操作sql语句  
@@ -94,6 +99,10 @@ class Dict(dict):
             return self[key]
         except KeyError:
             raise AttributeError(r"'Dict' object has no attribute '%s'" % key)
+
+
+
+
     '''
     Dict从dict继承，所以具备所有dict的功能，同时又实现了特殊方法__getattr__()和__setattr__()，所以又可以像引用普通字段那样写
     dict[id]
@@ -102,11 +111,18 @@ class Dict(dict):
     def __setattr__(self,key,value):
         self[key] = value
 
+
+
+
+
+    def __setattr__(self,key,value):
+        self[key] = value
+
+
 '''
 @method next_id() uuid4()  make a random UUID 得到一个随机的UUID 
 如果没有传入参数根据系统当前时间15位和一个随机得到的UUID 填充3个0 组成一个长度为50的字符串
 '''
-
 def next_id(t = None):
     '''Return next id as 50-char string.
        Args:
@@ -217,6 +233,11 @@ class _DbCtx(threading.local):
 #所以当需要数据库连接的时候就使用它来创建 
 _db_ctx = _DbCtx()
 '''''=====================================以上通过_db_ctx就可以打开和关闭链接==============================================''' 
+
+
+
+
+_db_ctx = _DbCtx()
 
 
 class _Engine(object):
@@ -612,7 +633,7 @@ if __name__=='__main__':
     logging.basicConfig(level=logging.DEBUG)
     import pdb
     pdb.set_trace()
-
+ 
     create_engine('luodan', 'a', 'webapp')
   #Dict()  
     #create_engine('root','123456','pythonstudy')  
@@ -636,6 +657,8 @@ if __name__=='__main__':
         insert('user',**u1) 
         print 'hellp' 
     '''  
+    create_engine('root', 'a', 'webapp')
+ 
     update('drop table if exists user')
     update('create table user (id int primary key, name text, email text, passwd text, last_modified real)')
     import doctest
