@@ -42,7 +42,7 @@ class Field(object):
         #注意：类是可调用的，而类的实例实现了__call__()方法才可调用。
 
     def __str__(self):
-    	s = ['<%s:%s,%s,default(%s),'% (self.__class__.__name__,self.name,self.ddl,self._default1)]
+    	s = ['<%s:%s,%s,default(%s),'% (self.__class__.__name__,self.name,self.ddl,self._default)]
         self.nullable and s.append('N')
         self.updatable and s.append('U')
         self.insertable and s.append('I')
@@ -70,9 +70,9 @@ class FloatField(Field):
     def __init__(self, **kw):
         if not 'default' in kw:
         	kw['default'] = 0.0
-		if not 'ddl' in kw:
-			kw['ddl'] = 'real'
-		super(FloatField, self).__init__(**kw)
+        if not 'ddl' in kw:
+            kw['ddl'] = 'real'
+        super(FloatField, self).__init__(**kw)
 
 class BooleanField(Field):
 	def __init__(self, **kw):
@@ -149,23 +149,23 @@ class ModelMetaclass(type):
         mappings = dict()
         primary_key = None
         for k,v in attrs.iteritems():
-        	if isinstance(v,Field):
-        		if not v.name:
+            if isinstance(v,Field):
+                if not v.name:
         			v.name = k
-        		logging.info('Found mapping:%s => %s' %(k,v))
+                logging.info('Found mapping: %s => %s' % (k, v))
         		#check duplicat primary key:
         		#primary_key:固定优先查询项，如依靠id来进行查询，那么id必须是不可变且非空的，并且一个实体只能有一个id值
-        		if v.primary_key:
+                if v.primary_key:
         			if primary_key:
         				raise TypeError('Cannot define more than 1 primary key in class:%s'%name)
         			if v.updatable:
-        				logging.warnning('Note:change primary key to non-updatable')
+        				logging.warning('Note:change primary key to non-updatable')
         				v.updatable = False
         			if v.nullable:
-        				logging.warnning('Note:change primary key to non-nullable.')
+        				logging.warning('Note:change primary key to non-nullable.')
         				v.nullable = False
         			primary_key = v
-        		mappings[k] = v
+                mappings[k] = v
          # check exist of primary key:
         if not primary_key:
             raise TypeError('Primary key not defined in class: %s' % name)

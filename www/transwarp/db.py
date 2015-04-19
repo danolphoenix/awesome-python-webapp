@@ -134,7 +134,7 @@ def next_id(t = None):
     '''
     if t is None:
         t = time.time()
-    return '%015d%s000' %(int(t*1000),uuid.uuid4.hex)
+    return '%015d%s000' % (int(t * 1000), uuid.uuid4().hex)
 
 '''
 @method _profiling 记录sql 的运行状态  
@@ -267,6 +267,7 @@ class _Engine(object):
         #外界执行_Engine里的.connect方法时，执行之前初始化时保存的函数对象，相当与执行这个链接动作,
         #目测这个lambda函数返回的结果就是指向这个数据库连接的指针,拿到这个连接指针之后就可以继续对数据库进行一系列操作
 
+#user,password，database为mySQL用户连接到mySQL所用的用户名和密码以及要操作的database
 def create_engine(user,password,database,host="127.0.0.1",port = 3306,**kw):
     import mysql.connector#导入mysql模块 
     global engine #global关键字 说明这个变量在外部定义了 这是一个全局变量 
