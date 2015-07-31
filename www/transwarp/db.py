@@ -361,6 +361,12 @@ def with_connection(func):
             return func(*args,**kw)
     return _wrapper
 
+''' 
+ with 语句： 
+ with 后面的语句会返回 _ConnectionCtx 对象 然后调用这个对象的 __enter__方法得到返回值 返回值赋值给as后面的变量 然后执行 
+ with下面的语句 执行完毕后 调用那个对象的 __exit__()方法 
+'''  
+
 
 class _TransactionCtx(object):
     '''_TransactionCtx object that can handle transactions.
@@ -602,6 +608,7 @@ def _update(sql,*args):
     finally:
         if cursor:#如果之前的连接不成功，那么这里的cursor是none
             cursor.close()
+
 
 def insert(table,**kw):
     '''

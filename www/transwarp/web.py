@@ -1078,51 +1078,51 @@ class Request(object):
             '''
             return self._status
 
-    @status.setter
-    def status(self, value):
-        '''
-        Set response status as int or str.
-        >>> r = Response()
-        >>> r.status = 404
-        >>> r.status
-        '404 Not Found'
-        >>> r.status = '500 ERR'
-        >>> r.status
-        '500 ERR'
-        >>> r.status = u'403 Denied'
-        >>> r.status
-        '403 Denied'
-        >>> r.status = 99
-        Traceback (most recent call last):
-        ...
-        ValueError: Bad response code: 99
-        >>> r.status = 'ok'
-        Traceback (most recent call last):
-        ...
-        ValueError: Bad response code: ok
-        >>> r.status = [1, 2, 3]
-        Traceback (most recent call last):
-        ...
-        TypeError: Bad type of response code.
-        '''
-        if isinstance(value, (int, long)):
-            if value>=100 and value<=999:
-                st = _RESPONSE_STATUSES.get(value, '')
-                if st:
-                    self._status = '%d %s' % (value, st)
+        @status.setter
+        def status(self, value):
+            '''
+            Set response status as int or str.
+            >>> r = Response()
+            >>> r.status = 404
+            >>> r.status
+            '404 Not Found'
+            >>> r.status = '500 ERR'
+            >>> r.status
+            '500 ERR'
+            >>> r.status = u'403 Denied'
+            >>> r.status
+            '403 Denied'
+            >>> r.status = 99
+            Traceback (most recent call last):
+            ...
+            ValueError: Bad response code: 99
+            >>> r.status = 'ok'
+            Traceback (most recent call last):
+            ...
+            ValueError: Bad response code: ok
+            >>> r.status = [1, 2, 3]
+            Traceback (most recent call last):
+            ...
+            TypeError: Bad type of response code.
+            '''
+            if isinstance(value, (int, long)):
+                if value>=100 and value<=999:
+                    st = _RESPONSE_STATUSES.get(value, '')
+                    if st:
+                        self._status = '%d %s' % (value, st)
+                    else:
+                        self._status = str(value)
                 else:
-                    self._status = str(value)
+                    raise ValueError('Bad response code: %d' % value)
+            elif isinstance(value, basestring):
+                if isinstance(value, unicode):
+                     value = value.encode('utf-8')
+                if _RE_RESPONSE_STATUS.match(value):
+                    self._status = value
+                else:
+                    raise ValueError('Bad response code: %s' % value)
             else:
-                raise ValueError('Bad response code: %d' % value)
-        elif isinstance(value, basestring):
-            if isinstance(value, unicode):
-                 value = value.encode('utf-8')
-            if _RE_RESPONSE_STATUS.match(value):
-                self._status = value
-            else:
-                raise ValueError('Bad response code: %s' % value)
-        else:
-            raise TypeError('Bad type of response code.')
+                raise TypeError('Bad type of response code.')
 
 class Template(object):
     def __init__(self,template_name,**kw):
@@ -1176,7 +1176,11 @@ class Jinja2TemplateEngine(TemplateEngine):
 
 def _default_error_handler(e,start_response,is_debug):
     if isinstance(e,HttpError):
-        logging.info()
+        logging.info('HttpError:%s' % e.status)
+        headers = e.headers[:]
+        headers.append(('Content-Type','text/html'))
+        start_response(e,status,headers)
+        return ('<html><body><h1>%s</h1></body></html>' % e.status)
 
 
 
@@ -1306,7 +1310,67 @@ class Jinja2TemplateEngine(TemplateEngine):
 
 class WSGIApplication(object):
     def __init__(self,document_root = None,**kw):
-        pass
+        '''init a WSGIApplication
+
+         Args:
+          document_root:document root path.
+        '''
+        self._running =False
+        self._document_root = document_root
+
+        self._interceptors = []
+        self._template_engine = None
+
+        self._get_static = {}
+        self._post_static = {}
+
+        self._get_dynamic = []
+        self,_post_dynamic = []
+        
+
+    def _check_not_running(self):
+        if self._running:
+            raise RuntimeError('cannot modify WSGIApplication when running')
+
+    @property
+    def template_engine(self):
+        return self._template_engine
+
+    @template_engine.setter
+    def template_engine(self, engine):
+        self._check_not_running()
+        self._template_engine = engine
+
+    def add_module(self, mod):
+        self._check_not_running()
+        m = mod if type(mod)==types.ModuleType else _load_module(mod)
+        logging.info('Add module:%s' % m.__name__)
+        for name in dir(m)
+            fn = getattr(m,name)
+            if callable(fn) and hasattr(fn,'__web_route__') and  hasattr(fn, '__web_method__'):
+                self.add_url(fn)
+    
+    def add_url(self,func):
+        self._check_not_running()
+        route = Route(func)
+        if route.is_static:
+            if route.method == 'GET':
+                self._get_static[route.path] = route
+            if route.method == 'POST':
+                self._post_static[route.path] = route
+        else:
+            if route.method=='GET':
+                self._get_dynamic.append(route)
+            if route.method=='POST':
+                self._post_dynamic.append(route)
+        logging.info('Add route: %s' % str(route))
+
+    def add_inteceptor(self,func):
+        self._check_not_running()
+        self._interceptors.append(func)
+        logging.info('Add interceptor: %s' % str(func))
+
+    def 
 
     #添加一个URL定义
     def add_url(self,func):
