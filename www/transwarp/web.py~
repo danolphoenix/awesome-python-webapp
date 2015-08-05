@@ -921,18 +921,18 @@ class Response(object):
 
 	def set_header(self, name, value):
 		'''
-		Set header by name and value.
-		>>> r = Response()
-		>>> r.header('content-type')
-		'text/html; charset=utf-8'
-		>>> r.set_header('CONTENT-type', 'image/png')
-		>>> r.header('content-TYPE')
-		'image/png'
-		'''
-		key = name.upper()
-		if not key in _RESPONSE_HEADER_DICT:
-			key = name
-		self._headers[key] = _to_str(value)
+        Set header by name and value.
+        >>> r = Response()
+        >>> r.header('content-type')
+        'text/html; charset=utf-8'
+        >>> r.set_header('CONTENT-type', 'image/png')
+        >>> r.header('content-TYPE')
+        'image/png'
+        '''
+        key = name.upper()
+        if not key in _RESPONSE_HEADER_DICT:
+            key = name
+        self._headers[key] = _to_str(value)
 
 
 	@property 
