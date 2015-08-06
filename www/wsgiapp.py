@@ -21,6 +21,10 @@ print configs.db
 print configs.db['user']
 print configs.db['password']
 print configs.db['database']
+
+import pdb
+pdb.set_trace()
+
 db.create_engine(configs.db['user'],configs.db['password'],configs.db['database'])#,**configs.db)
 
 # init wsgi app:
@@ -35,5 +39,7 @@ import urls
 wsgi.add_module(urls)
 
 if __name__ == '__main__':
-    wsgi.run(9000)
+	import pdb
+	pdb.set_trace()
+	wsgi.run(9000)
 

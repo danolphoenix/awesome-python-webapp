@@ -291,8 +291,7 @@ def create_engine(user,password,database,host="127.0.0.1",port = 3306,**kw):
     #dict.update(dict2),update()函数把字典dict2的键/值对更新到dict里.若是dict1中已经有的键值，用dict2中的覆盖
     #如果kw中还有其他参数，都装进params中
     params['buffered'] = True
-    import pdb
-    pdb.set_trace()
+   
     engine = _Engine(lambda:mysql.connector.connect(**params))
     #在这里(lambda:mysql.connector.connect(**params))返回的是一个函数而不是一个connection对象
     #注意engine是在下面用_Engine创建的用当前传入的params标识的链接engine 
