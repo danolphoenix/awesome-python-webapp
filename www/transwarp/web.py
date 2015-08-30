@@ -402,7 +402,7 @@ def _unquote(s,encoding = 'utf-8'):
     '''
     return urllib.unquote(s).decode(encoding)
 
-def get(path):
+def get(path):#只是对被装饰函数的__web_route__和__web_method__作修改
     '''
     A @get decorator.
     @get('/:id')
@@ -447,7 +447,7 @@ def post(path):
 
 _re_route = re.compile(r'(\:[a-zA-Z_]\w*)')
 
-def _build_regex(path):
+def _build_regex(path):#将路由path转为正则表达式
     r'''
     Convert route path to regex.
     >>> _build_regex('/path/to/:file')
@@ -481,18 +481,29 @@ def _build_regex(path):
     re_list.append('$')
     return ''.join(re_list)
 
-class Route(object):
+class Route(object):#一条route里包含有path，和该path的处理方法GET/POST，以及处理函数
     '''
     A Route object is a callable object.
     '''
 
-    def __init__(self,func):
+    def __init__(self,func):#传入方法，方法中包含有两个字段__web_route__和__web_method__,前者对应了path，后者对应的GET或者POST这类http方法
         self.path = func.__web_route__
         self.method = func.__web_method__
         self.is_static = _re_route.search(self.path) is None
+        #判断是否静态路由（就是url中都是写的什么就是什么，不包含需要进行通配操作的url），静态路由
         if not self.is_static:
-            self.route = re.compile(_build_regex(self.path))
-        self.func = func 
+            self.route = re.compile(_build_regex(self.path))#非静态路由，就把该条路由的匹配规则给放到self.route里
+            # 则将path经过转换为正则表达式/path/to/:file  -》  ^\\/(?P<user>[^\\/]+)\\/(?P<comments>[^\\/]+)\\/list$
+            # 然后通过re.compile来指定适配范围
+
+            # Python通过re模块提供对正则表达式的支持。使用re的一般步骤是先使用re.compile()函数，将正则表达式的字符串形式编译为Pattern实例，然后使用Pattern实例处理文本并获得匹配结果（一个Match实例），最后使用Match实例获得信息，进行其他的操作。
+            # 举一个简单的例子，在寻找一个字符串中所有的英文字符：
+            # import re
+            # pattern = re.compile('[a-zA-Z]')
+            # result = pattern.findall('as3SiOPdj#@23awe')
+            # print result
+            #  ['a', 's', 'S', 'i', 'O', 'P', 'd', 'j', 'a', 'w', 'e']
+        self.func = func
 
     def match(self,url):
         m = self.route.match(url)
