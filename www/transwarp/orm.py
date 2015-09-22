@@ -29,11 +29,11 @@ class Field(object):
         self.ddl = kw.get('ddl', '')
         self._order = Field._count
         Field._count = Field._count + 1
- 
+
     #对于类的方法，装饰器一样起作用。@property装饰器就是负责把一个方法变成属性调用的
     #把一个getter方法function(self)变成属性，只需要加上@property就可以了
     #此时，@property本身又创建了另一个装饰器@function.setter，负责把一个setter方法function(self,value)变成属性赋值
-    @property 
+    @property
     def default(self):
     	d = self._default
     	return d() if callable(d) else d
@@ -129,12 +129,13 @@ def _gen_sql(table_name, mappings):
 #ModelMetaclass元类，用于创建和sql表相对应的模型类，如和User表对应的User类
 class ModelMetaclass(type):
     '''
-	ModelMetaclass for model class 
+	ModelMetaclass for model class
 	'''
     #skip base Model Class
     def __new__(cls,name,bases,attrs):
         if name == 'Model':
-            return type.__new__(cls,name,bases,attrs)    
+            return type.__new__(cls,name,bases,attrs)
+
         #store all subclasses info:
         #凡是由cls定义出来的类，那么肯定记录在cls的sublclasses表中，如果已经存在对应项，表示该类已经定义过了
         #不是父类和子类的关系，而是元类和经由元类定义的类的关系
@@ -185,7 +186,7 @@ class ModelMetaclass(type):
 
 
 
-			
+
 
 class Model(dict):
     '''
@@ -255,14 +256,14 @@ class Model(dict):
         self[key] = value
 
     @classmethod
-    # 一般方法使用 类生成的对象调用,静态方法用类直接调用,类方法用类直接调用类当参数传入方法 
+    # 一般方法使用 类生成的对象调用,静态方法用类直接调用,类方法用类直接调用类当参数传入方法
     #对于classmethod的参数，需要隐式地传递类名，而staticmethod参数中则不需要传递类名，其实这就是二者最大的区别。
     #@classmethod 仅仅适用于单独的，与类本身的数据结构无关函数，其实用了它的函数，与使用普通函数无异，甚至不能在参数里加入 self，如果要在其中使用类的数据结构，仍然需要将类实例化一次才可以，所以要小心使用。
     #get这个方法和find_first的区别在于，get方法只支持使用primary_key作为查询关键字
     def get(cls,pk):#这里的cls是类名,u = User.get('123')可以直接返回一个User类实例给u
        '''Get by primary key'''
        d = db.select_one('select * from %s where %s =?' % (cls.__table__,cls.__primary_key__.name),pk)
-       return cls(**d) if d else None 
+       return cls(**d) if d else None
 
 
     #find_first支持任意字段值查询，但是返回满足条件的第一个
@@ -273,7 +274,7 @@ class Model(dict):
     	only the first one returned ,if no result found,return None
     	'''
     	d = db.select_one('select * from %s %s' %(cls.__table__,where),*args)
-    	return cls(**d) if d else None 
+    	return cls(**d) if d else None
 
     #find_all返回整张表里所有的值，组装成一个对象实例列表返回
     @classmethod
