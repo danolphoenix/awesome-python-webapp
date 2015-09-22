@@ -258,11 +258,14 @@ class Model(dict):
     # 一般方法使用 类生成的对象调用,静态方法用类直接调用,类方法用类直接调用类当参数传入方法 
     #对于classmethod的参数，需要隐式地传递类名，而staticmethod参数中则不需要传递类名，其实这就是二者最大的区别。
     #@classmethod 仅仅适用于单独的，与类本身的数据结构无关函数，其实用了它的函数，与使用普通函数无异，甚至不能在参数里加入 self，如果要在其中使用类的数据结构，仍然需要将类实例化一次才可以，所以要小心使用。
+    #get这个方法和find_first的区别在于，get方法只支持使用primary_key作为查询关键字
     def get(cls,pk):#这里的cls是类名,u = User.get('123')可以直接返回一个User类实例给u
        '''Get by primary key'''
        d = db.select_one('select * from %s where %s =?' % (cls.__table__,cls.__primary_key__.name),pk)
        return cls(**d) if d else None 
 
+
+    #find_first支持任意字段值查询，但是返回满足条件的第一个
     @classmethod
     def find_first(cls,where,*args):
     	'''
@@ -272,6 +275,7 @@ class Model(dict):
     	d = db.select_one('select * from %s %s' %(cls.__table__,where),*args)
     	return cls(**d) if d else None 
 
+    #find_all返回整张表里所有的值，组装成一个对象实例列表返回
     @classmethod
     def find_all(cls,*args):
     	'''
@@ -280,6 +284,7 @@ class Model(dict):
     	L = db.select('select * from `%s`' % cls.__table__)
     	return [cls(**d) for d in L]
 
+    #find_by支持任意字段值查询，返回满足条件的所有值
     @classmethod
     def find_by(cls,where,*args):
         '''
@@ -288,6 +293,7 @@ class Model(dict):
         L = db.select('select * from `%s` %s' % (cls.__table__, where), *args)
         return [cls(**d) for d in L]
 
+    #count_all查出某表__primary_key__字段的集合，也就是有几条记录
     @classmethod
     def count_all(cls):
     	'''
@@ -295,13 +301,13 @@ class Model(dict):
     	'''
     	return db.select_int('select count (`%s`) from `%s`' % (cls.__primary_key__,cls.__table__))
 
+    #count_by查出某表中满足where=args的记录条数
     @classmethod
     def count_by(cls,where,*args):
-    	'''
-    	find by 'select count(pk) from table where ...' and return int.
-    	'''
-    	return db.select_int('select count (`%s`) from `%s` %s ' %(cls.__primary_key__.name,cls.__table__,where),*args)
-    
+        '''
+        find by 'select count(pk) from table where ...' and return int.
+        '''
+        return db.select_int('select count (`%s`) from `%s` %s '% (cls.__primary_key__.name, cls.__table__, where), *args)
 
     def update(self):
     	self.pre_update and self.pre_update()#where are these two functions from?
@@ -328,6 +334,7 @@ class Model(dict):
     	db.update('delete from `%s` where `%s` =?' % (self.__table__,pk),*args)
     	return self
 
+    #构造了某对象instance,instance.insert(),则将instance自动插入到该对象类的表中
     def insert(self):
     	self.pre_insert and self.pre_insert()
     	params = {}
