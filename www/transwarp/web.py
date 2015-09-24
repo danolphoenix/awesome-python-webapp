@@ -531,23 +531,27 @@ def _static_file_generator(fpath):
 
 class StaticFileRoute(object):
     def __init__(self):
-		self.method = 'GET'
-		self.is_static = False
-		self.route = re.compile('^/static/(.+)$')
+        self.method = 'GET'
+        self.is_static = False
+        self.route = re.compile('^/static/(.+)$')
 
     def match(self, url):
         if url.startswith('/static/'):
+            # 返回去掉了开头斜杠的path，比如传入的url为/static/css/uikit.min.css，返回（static/css/uikit.min.css，）元组
             return (url[1:], )
         return None
-	
 
-	def __call__(self,*args):
-		fpath = os.path.join(ctx.application.document_root,args[0])
-		if not os.path.isfile(fpath):
-			raise notfound()
-		fext = os.path.splitext(fpath)[1]
-		ctx.response.content_type = mimetypes.types_map.get(fext.lower(),'application/octet-stream')
-		return _static_file_generator(fpath)
+    #让StaticFileRoute对象也变得可以调用，
+    def __call__(self,*args):
+        # document_root为'E:\\awesome-python-webapp\\www'，args[0]为static/css/uikit.min.css，连接起来
+        fpath = os.path.join(ctx.application.document_root,args[0])
+        if not os.path.isfile(fpath):
+            raise notfound()
+        #将'E:\\awesome-python-webapp\\www\\static/css/uikit.min.css'切开成('E:\\awesome-python-webapp\\www\\static/css/uikit.min', '.css')，并返回后面[1]那个.css
+        fext = os.path.splitext(fpath)[1]
+        #在response中返回content_type类型为'text/css'
+        ctx.response.content_type = mimetypes.types_map.get(fext.lower(),'application/octet-stream')
+        return _static_file_generator(fpath)
 
 def favcon_handler():
     return static_file_handler('/favicon.ico')
@@ -1179,6 +1183,7 @@ class Jinja2TemplateEngine(TemplateEngine):
             kw['autoescape'] = True
         self._env = Environment(loader=FileSystemLoader(templ_dir),**kw)
 
+    # template_engine.add_filter('datetime',datetime_filter)
     def add_filter(self,name,fn_filter):
         self._env.filters[name] = fn_filter
         #key为字符串name，value为传入的函数fn_filter
@@ -1219,6 +1224,14 @@ def view(path):
         @functools.wraps(func)
         def _wrapper(*args, **kw):
             r = func(*args, **kw)
+            #r在func被调用的时候，对于传进来的方法和参数进行求值,
+            # 对于url.py中的
+            # @view('blogs.html')
+            # @get('/')
+            # Index(),
+            # 它的view('blogs.html')装饰器入参为'blogs.html'，表示使用这个html模板
+            # get('/')装饰器更新了Index（）方法的__web_route__为/，_web_method__为GET
+            # 返回的是dict(blog=blogs,user=user)，相当于r的值为该dict，再把dict传给blogs.html这个模板
             if isinstance(r, dict):
                 logging.info('return Template')
                 return Template(path, **r)
@@ -1306,6 +1319,7 @@ def _build_interceptor_chain(last_fn, *interceptors):
     L.reverse()
     fn = last_fn
     for f in L:
+        # 用f来拦截fn
         fn = _build_interceptor_fn(f, fn)
     return fn
 
@@ -1389,7 +1403,7 @@ class WSGIApplication(object):
                 self._post_dynamic.append(route)
         logging.info('Add route: %s' % str(route))
 
-    def add_inteceptor(self,func):
+    def add_interceptor(self,func):
         self._check_not_running()
         self._interceptors.append(func)
         logging.info('Add interceptor: %s' % str(func))
@@ -1397,6 +1411,7 @@ class WSGIApplication(object):
     def run(self, port=9000,host='127.0.0.1'):
         from wsgiref.simple_server import make_server
         logging.info('application(%s) will start at %s:%s...'%(self._document_root,host,port))
+        # get_wsgi_applicationf返回一个wsgi方法，该方法里定义了如何根据url拦截的过程并做出响应
         server = make_server(host, port, self.get_wsgi_application(debug=True))
         server.serve_forever()
 
@@ -1430,16 +1445,15 @@ class WSGIApplication(object):
                     raise notfound()
                 raise badrequest()
 
+
         fn_exec = _build_interceptor_chain(fn_route,*self._interceptors)
 	
         def wsgi(env,start_response):
-            import pdb
-            pdb.set_trace()
-
             ctx.application = _application
             ctx.request = Request(env)
             response = ctx.response = Response()
             try:
+                #对于请求css文件的，返回一个_static_file_generator
                 r = fn_exec()
                 if isinstance(r,Template):
                     r = self._template_engine(r.template_name, r.model)
@@ -1473,6 +1487,8 @@ class WSGIApplication(object):
                 del ctx.application
                 del ctx.request
                 del ctx.response
+
+        #把定义的这个wsgi方法返回去
         return wsgi
 
 if __name__ == '__main__':

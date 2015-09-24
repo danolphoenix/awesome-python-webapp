@@ -269,6 +269,7 @@ class _Engine(object):
 
 #user,password，database为mySQL用户连接到mySQL所用的用户名和密码以及要操作的database
 def create_engine(user,password,database,host="127.0.0.1",port = 3306,**kw):
+
     print "create_engine"
     print kw
     import mysql.connector#导入mysql模块 
@@ -291,7 +292,7 @@ def create_engine(user,password,database,host="127.0.0.1",port = 3306,**kw):
     #dict.update(dict2),update()函数把字典dict2的键/值对更新到dict里.若是dict1中已经有的键值，用dict2中的覆盖
     #如果kw中还有其他参数，都装进params中
     params['buffered'] = True
-   
+
     engine = _Engine(lambda:mysql.connector.connect(**params))
     #在这里(lambda:mysql.connector.connect(**params))返回的是一个函数而不是一个connection对象
     #注意engine是在下面用_Engine创建的用当前传入的params标识的链接engine 
@@ -321,8 +322,6 @@ class _ConnectionCtx(object):
     '''
     def __enter__(self):
         #use 'global' to tell python the variable _db_ctx is defined out of this func
-        import pdb
-        pdb.set_trace()
         global _db_ctx
         self.should_cleanup = False
         if not _db_ctx.is_init():#是否_db_ctx.connection被初始化为连接对象LazyConnection
@@ -331,8 +330,6 @@ class _ConnectionCtx(object):
         return self
 
     def __exit__(self,exctype,excvalue,traceback):
-        import pdb
-        pdb.set_trace()
         global _db_ctx
         if self.should_cleanup:
             _db_ctx.cleanup()
@@ -592,8 +589,6 @@ def _update(sql,*args):
     sql = sql.replace('?','%s')
     logging.info('SQL:%s,ARGS:%s' %(sql,args))
     try:
-        import pdb
-        pdb.set_trace
         cursor = _db_ctx.connection.cursor()
         #在with_connection的_enter_里只是指定了 _db_ctx.connection为LazyConnection对象，
         #但是还没有执行真正的连接动作，在LazyConnection.connection中是None

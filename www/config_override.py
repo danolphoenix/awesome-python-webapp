@@ -9,6 +9,6 @@ __author__= "rodan"
 
 configs ={
 	'db':{
-	    'host':'127.0.0.1'
+	    'host':'10.166.224.20'
 	}
 }
