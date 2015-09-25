@@ -300,7 +300,7 @@ class Model(dict):
     	'''
     	Find by  'select count(pk) from table' and return integar.
     	'''
-    	return db.select_int('select count (`%s`) from `%s`' % (cls.__primary_key__,cls.__table__))
+    	return db.select_int('select count(`%s`) from `%s`' % (cls.__primary_key__.name,cls.__table__))
 
     #count_by查出某表中满足where=args的记录条数
     @classmethod
@@ -308,7 +308,7 @@ class Model(dict):
         '''
         find by 'select count(pk) from table where ...' and return int.
         '''
-        return db.select_int('select count (`%s`) from `%s` %s '% (cls.__primary_key__.name, cls.__table__, where), *args)
+        return db.select_int('select count(`%s`) from `%s` %s '% (cls.__primary_key__.name, cls.__table__, where), *args)
 
     def update(self):
     	self.pre_update and self.pre_update()#where are these two functions from?

@@ -6,7 +6,9 @@ __author__ = 'luodan but not original'
 
 import os, re, time, base64, hashlib, logging
 
-from apis import api, APIError, APIValueError, APIPermissionError, APIResourceNotFoundError
+import markdown2
+
+from apis import api, APIError, APIValueError, APIPermissionError, APIResourceNotFoundError,Page
 from transwarp.web import get,post,view,ctx,interceptor, seeother, notfound
 
 from models import User, Blog, Comment
@@ -17,6 +19,15 @@ _COOKIE_NAME = 'awesession'
 _COOKIE_KEY = configs.session.secret
 
 import time
+
+def _get_page_index():
+    page_index = 1
+    try:
+        page_index = int(ctx.request.get('page', '1'))
+    except ValueError:
+        pass
+    return page_index
+
 
 
 def make_signed_cookie(id, password, max_age):
@@ -50,9 +61,7 @@ def check_admin():
 
 @interceptor('/')
 def user_interceptor(next):
-    import pdb
-    pdb.set_trace()
-    logging.info('try to bind user from session cookie...')
+    logging.info('USER_INTERCEPTOR: try to bind user from session cookie...')
     user = None
     cookie = ctx.request.cookies.get(_COOKIE_NAME)
     if cookie:
@@ -65,8 +74,7 @@ def user_interceptor(next):
 
 @interceptor('/manage/')
 def manage_interceptor(next):
-    import pdb
-    pdb.set_trace()
+    logging.info('MANAGE_INTERCEPTOR')
     user = ctx.request.user
     if user and user.admin:
         return next()
@@ -75,17 +83,15 @@ def manage_interceptor(next):
 @view('blogs.html')
 @get('/')
 def index():
-
+    blogs, page = _get_blogs_by_page()
     blogs = Blog.find_all()
     summary = 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.'
     fakeblogs =[Blog(id='2', name='Test Blog', summary=summary, created_at=time.time()-120),
         Blog(id='3', name='Something New', summary=summary, created_at=time.time()-3600),
         Blog(id='4', name='Learn Swift', summary=summary, created_at=time.time()-7200),
-
         Blog(id='5', name='Test Blog2', summary=summary, created_at=time.time()-120),
         Blog(id='6', name='Something New2', summary=summary, created_at=time.time()-3600),
         Blog(id='7', name='Learn Swift2', summary=summary, created_at=time.time()-7200),
-
         Blog(id='8', name='Test Blog3', summary=summary, created_at=time.time()-120),
         Blog(id='9', name='Something New3', summary=summary, created_at=time.time()-3600),
         Blog(id='10', name='Learn Swift3', summary=summary, created_at=time.time()-7200),
@@ -96,9 +102,21 @@ def index():
         blogs.append(i)
 
     #查找登陆用户：
-    user = User.find_first("where email=?", "danolphoenix@163.com")
+    #user = User.find_first("where email=?", "danolphoenix@163.com")
 
-    return dict(blogs=blogs,user=user)
+    return dict(page=page, blogs=blogs, user=ctx.request.user)
+
+@view('blog.html')
+@get('/blog/:blog_id')
+def blog(blog_id):
+    import pdb
+    pdb.set_trace()
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise notfound()
+    blog.html_content = markdown2.markdown(blog.content)
+    comments = Comment.find_by('where blog_id=? order by created_at desc limit 1000',blog_id)
+    return dict(blog=blog, comments=comments, user=ctx.request.user)
 
 
 @view('signin.html')
@@ -106,10 +124,12 @@ def index():
 def signin():
     return dict()
 
+
 @get('/signout')
 def signout():
     ctx.response.delete_cookie(_COOKIE_NAME)
     raise seeother('/')
+
 
 @api
 @post('/api/authenticate')
@@ -158,16 +178,75 @@ def register_user():
     ctx.response.set_cookie(_COOKIE_NAME, cookie)
     return user
 
+
 @view('register.html')
 @get('/register')
 def register():
     return dict()
 
 
+@get('/manage/')
+def manage_index():
+    raise seeother('/manage/comments')
+
+
+@view('manage_commit_list.html')
+@get('/manage/comments')
+def manage_comments():
+    import pdb
+    pdb.set_trace()
+    return dict(page_index=_get_page_index(), user=ctx.request.user)
+
+
+@view('manage_blog_list.html')
+@get('/manage/blogs')
+def manage_blogs():
+    return dict(page_index=_get_page_index(), user=ctx.request.user)
+
+
 @view('manage_blog_edit.html')
 @get('/manage/blogs/create')
 def manage_blogs_create():
+    # 将以下内容填充到view装饰器manage_blog_edit.html中，里面有js代码等着这些内容,重点是action和redirect
+    # 将包含内容和js代码的manage_blog_edit.html发给浏览器之后，
+    # 填写好了博客内容，执行提交，浏览器会把内容发到/api/blogs这个url上，调用api_create_blog进行处理，处理完了之后返回redirect信息给浏览器
+    # 浏览器根据重定向信息再重新申请/manage/blogs，跳转到博客列表页面
     return dict(id=None, action='/api/blogs', redirect='/manage/blogs', user=ctx.request.user)
+
+
+@view('manage_blog_edit.html')
+@get('/manage/blogs/edit/:blog_id')
+def manage_blogs_edit(blog_id):
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise notfound()
+    return dict(id=blog.id, name=blog.name, summary=blog.summary, content=blog.content, action='/api/blogs/%s' % blog_id, redirect='/manage/blogs', user=ctx.request.user)
+
+
+@view('manage_user_list.html')
+@get('/manage/users')
+def manage_users():
+    return dict(page_index=_get_page_index(), user=ctx.request.user)
+
+@api
+@get('/api/blogs')
+def api_get_blogs():
+    format = ctx.request.get('format', '')
+    blogs, page = _get_blogs_by_page()
+    if format=='html':
+        for blog in blogs:
+            blog.content = markdown2.markdown(blog.content)
+    return dict(blogs=blogs, page=page)
+
+
+@api
+@get('/api/blogs/:blog_id')
+def api_get_blog(blog_id):
+    blog = Blog.get(blog_id)
+    if blog:
+        return blog
+    raise APIResourceNotFoundError('Blog')
+
 
 
 @api
@@ -189,10 +268,97 @@ def api_create_blog():
     blog.insert()
     return blog
 
+
+@api
+@post('/api/blogs/:blog_id')
+def api_update_blog(blog_id):
+    check_admin()
+    i = ctx.request.input(name='', summary='', content='')
+    name = i.name.strip()
+    summary = i.summary.strip()
+    content = i.content.strip()
+    if not name:
+        raise APIValueError('name', 'name cannot be empty.')
+    if not summary:
+        raise APIValueError('summary', 'summary cannot be empty.')
+    if not content:
+        raise APIValueError('content', 'content cannot be empty.')
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise APIResourceNotFoundError('Blog')
+    blog.name = name
+    blog.summary = summary
+    blog.content = content
+    blog.update()
+    return blog
+
+
+@api
+@post('/api/blogs/:blog_id/delete')
+def api_delete_blog(blog_id):
+    check_admin()
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise APIResourceNotFoundError('Blog')
+    blog.delete()
+    return dict(id=blog_id)
+
+@api
+@post('/api/blogs/:blog_id/comments')
+def api_create_blog_comment(blog_id):
+    user = ctx.request.user
+    if user is None:
+        raise APIPermissionError('Need signin.')
+    blog = Blog.get(blog_id)
+    if blog is None:
+        raise APIResourceNotFoundError('Blog')
+    content = ctx.request.input(content='').content.strip()
+    if not content:
+        raise APIValueError('content')
+    c = Comment(blog_id=blog_id, user_id=user.id, user_name=user.name, user_image=user.image, content=content)
+    c.insert()
+    return dict(comment=c)
+
+
+@api
+@post('/api/comments/:comment_id/delete')
+def api_delete_comment(comment_id):
+    import pdb
+    pdb.set_trace()
+    check_admin()
+    comment = Comment.get(comment_id)
+    if comment is None:
+        raise APIResourceNotFoundError('Comment')
+    comment.delete()
+    return dict(id=comment_id)
+
+@api
+@get('/api/comments')
+def api_get_comments():
+    total = Comment.count_all()
+    page = Page(total, _get_page_index())
+    comments = Comment.find_by('order by created_at desc limit ?,?', page.offset, page.limit)
+    return dict(comments=comments, page=page.__dict__)
+
+
 @api
 @get('/api/users')
 def api_get_users():
-    users = User.find_by('order by created_at desc')
+    total = User.count_all()
+    page = Page(total, _get_page_index())
+    users = User.find_by('order by created_at desc limit ?,?', page.offset, page.limit)
     for u in users:
         u.password = '******'
-    return dict(users=users)
+    return dict(users=users, page=page.__dict__)
+
+def _get_blogs_by_page():
+    total = Blog.count_all()
+    page = Page(total, _get_page_index())
+    blogs = Blog.find_by('order by created_at desc limit ?,?', page.offset, page.limit)
+    return blogs, page.__dict__
+
+@api
+@get('/api/blogs')
+def api_get_blogs():
+    blogs, page = _get_blogs_by_page()
+    return dict(blogs=blogs, page=page)

@@ -1223,8 +1223,8 @@ def view(path):
     def _decorator(func):
         @functools.wraps(func)
         def _wrapper(*args, **kw):
-            r = func(*args, **kw)
-            #r在func被调用的时候，对于传进来的方法和参数进行求值,
+            # 用view方法装饰的时候，先对装饰器内部的处理方法进行求值，然后再将将求值的结果填充到html模板里
+            # r在func被调用的时候，对于传进来的方法和参数进行求值,
             # 对于url.py中的
             # @view('blogs.html')
             # @get('/')
@@ -1232,6 +1232,7 @@ def view(path):
             # 它的view('blogs.html')装饰器入参为'blogs.html'，表示使用这个html模板
             # get('/')装饰器更新了Index（）方法的__web_route__为/，_web_method__为GET
             # 返回的是dict(blog=blogs,user=user)，相当于r的值为该dict，再把dict传给blogs.html这个模板
+            r = func(*args, **kw)
             if isinstance(r, dict):
                 logging.info('return Template')
                 return Template(path, **r)
@@ -1264,8 +1265,15 @@ def interceptor(pattern='/'):
         return func
     return _decorator
 
+# 用func来拦截next
 def _build_interceptor_fn(func, next):
     def _wrapper():
+        #func.__interceptor__中放的是适配规则方法。在被调用时，如果适配规则能够和当前请求的path_info匹配上，那么就执行func(next)
+        #如果匹配不上，那么直接执行next（）由next去拦截。这么看来拦截器的搜索拦截目标范围为整个path_info。跟指定的拦截器的顺序有关系
+        #拦截器都是def fun(next)
+        #             做些操作
+        #             return next()
+
         if func.__interceptor__(ctx.request.path_info):
             return func(next)
         else:
@@ -1322,6 +1330,8 @@ def _build_interceptor_chain(last_fn, *interceptors):
         # 用f来拦截fn
         fn = _build_interceptor_fn(f, fn)
     return fn
+    # 返回fn是一个已经包好的拦截器链，最里面是fn_route, 它负责在那些用@get,@post装饰过的方法，找用哪一个来处理。
+    # 调用时，就是用ctx全局变量来获取request，user等，并执行拦截器中的内容
 
 def _load_module(module_name):
 	'''
@@ -1425,6 +1435,8 @@ class WSGIApplication(object):
         def fn_route():
             request_method = ctx.request.request_method
             path_info = ctx.request.path_info
+            import pdb
+            pdb.set_trace()
             if request_method=='GET':
                 fn = self._get_static.get(path_info,None)
                 if fn:
@@ -1433,7 +1445,7 @@ class WSGIApplication(object):
                     args = fn.match(path_info)
                     if args:
                         return fn(*args)    
-                    raise notfound()
+                raise notfound()
             if request_method=='POST':
                 fn =self._post_static.get(path_info,None)
                 if fn:
@@ -1445,15 +1457,16 @@ class WSGIApplication(object):
                     raise notfound()
                 raise badrequest()
 
-
         fn_exec = _build_interceptor_chain(fn_route,*self._interceptors)
 	
         def wsgi(env,start_response):
             ctx.application = _application
             ctx.request = Request(env)
+            logging.info('Request path_info:%s' % ctx.request.path_info)
             response = ctx.response = Response()
             try:
                 #对于请求css文件的，返回一个_static_file_generator
+                #fn_exec 是一个包装好的拦截器链，执行完成fn_exec()之后返回的具体内容由各个静态/动态路由对应的方法返回的结果决定
                 r = fn_exec()
                 if isinstance(r,Template):
                     r = self._template_engine(r.template_name, r.model)
